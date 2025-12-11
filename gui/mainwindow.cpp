@@ -17,7 +17,12 @@
 #include <QUrl>
 #include <QFile>
 #include <QTextStream>
+#include <QDir>
 #include <fstream>
+
+namespace {
+    constexpr size_t WAV_HEADER_SIZE = 44;  // Standard WAV header size in bytes
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -193,7 +198,7 @@ void MainWindow::setupMenuBar() {
     connect(playAction, &QAction::triggered, this, &MainWindow::playAudio);
     
     QAction *stopAction = playbackMenu->addAction("Остановить");
-    playAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_S));
+    stopAction->setShortcut(QKeySequence(Qt::Key_Space));
     connect(stopAction, &QAction::triggered, this, &MainWindow::stopAudio);
     
     // Меню "Справка"
@@ -353,7 +358,7 @@ void MainWindow::generateWav() {
     }
     
     // Сохранить текст во временный файл
-    QString tempInputPath = "/tmp/itmoloops_temp_input.txt";
+    QString tempInputPath = QDir::temp().filePath("itmoloops_temp_input.txt");
     QFile tempFile(tempInputPath);
     if (!tempFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QMessageBox::critical(this, "Ошибка", "Не удалось создать временный файл");
@@ -393,8 +398,8 @@ void MainWindow::generateWav() {
     // Загрузить WAV для визуализации
     std::ifstream wavFile(wavFileName.toStdString(), std::ios::binary);
     if (wavFile.is_open()) {
-        // Пропустить WAV заголовок (44 байта)
-        wavFile.seekg(44);
+        // Пропустить WAV заголовок
+        wavFile.seekg(WAV_HEADER_SIZE);
         
         std::vector<float> samples;
         int16_t sample;
@@ -450,7 +455,7 @@ void MainWindow::onPlayerStateChanged(QMediaPlayer::PlaybackState state) {
 
 void MainWindow::parseCurrentText() {
     // Сохранить текст во временный файл для парсинга
-    QString tempPath = "/tmp/itmoloops_parse_temp.txt";
+    QString tempPath = QDir::temp().filePath("itmoloops_parse_temp.txt");
     QFile tempFile(tempPath);
     if (!tempFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         return;

@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iostream>
 #include <cmath>
+#include <cstring>
 #include <algorithm>
 
 namespace itmoloops {
@@ -339,16 +340,21 @@ void GuiApp::RenderFileEditor() {
     ImGui::Separator();
     
     // Multiline text editor with callback to track modifications
-    static std::string temp_buffer;
-    if (temp_buffer.capacity() < file_content_.size() + 4096) {
-        temp_buffer.reserve(file_content_.size() + 4096);
+    // Reserve enough space for editing
+    const size_t buffer_size = file_content_.size() + 4096;
+    static std::vector<char> edit_buffer;
+    if (edit_buffer.size() < buffer_size) {
+        edit_buffer.resize(buffer_size);
     }
-    temp_buffer = file_content_;
     
-    if (ImGui::InputTextMultiline("##source", &temp_buffer[0], temp_buffer.capacity(),
+    // Copy current content to buffer
+    std::strncpy(edit_buffer.data(), file_content_.c_str(), edit_buffer.size() - 1);
+    edit_buffer[edit_buffer.size() - 1] = '\0';
+    
+    if (ImGui::InputTextMultiline("##source", edit_buffer.data(), edit_buffer.size(),
                                   ImVec2(-1.0f, -1.0f),
                                   ImGuiInputTextFlags_AllowTabInput)) {
-        file_content_ = temp_buffer;
+        file_content_ = edit_buffer.data();
         file_modified_ = true;
     }
     

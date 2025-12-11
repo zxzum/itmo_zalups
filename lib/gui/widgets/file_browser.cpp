@@ -127,6 +127,7 @@ bool FileBrowser::Show(const char* title, std::string& selected_path) {
         
         // Buttons
         if (ImGui::Button("Select", ImVec2(120, 0))) {
+            path_buffer_[sizeof(path_buffer_) - 1] = '\0'; // Ensure null-termination
             if (std::strlen(path_buffer_) > 0) {
                 fs::path p(current_directory_);
                 p /= path_buffer_;

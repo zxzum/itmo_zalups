@@ -113,18 +113,16 @@ Composition CompositionParser::Parse(const std::string& content) {
             auto tokens = Split(line, ' ');
             if (tokens.size() >= 3) {
                 pattern.name = tokens[1];
-                if (tokens.size() >= 4 && tokens[2] == "resolution") {
+                // Try to parse resolution - could be "pattern name resolution N" or "pattern name N"
+                size_t res_idx = (tokens.size() >= 4 && tokens[2] == "resolution") ? 3 : 2;
+                if (res_idx < tokens.size()) {
                     try {
-                        pattern.resolution = std::stoi(tokens[3]);
+                        pattern.resolution = std::stoi(tokens[res_idx]);
                     } catch (...) {
                         pattern.resolution = 8;
                     }
                 } else {
-                    try {
-                        pattern.resolution = std::stoi(tokens[2]);
-                    } catch (...) {
-                        pattern.resolution = 8;
-                    }
+                    pattern.resolution = 8;
                 }
             }
             
@@ -137,7 +135,7 @@ Composition CompositionParser::Parse(const std::string& content) {
                 }
                 
                 // Parse note or pattern reference
-                if (!line.empty() && !line.empty() && line[0] == '@') {
+                if (!line.empty() && line[0] == '@') {
                     pattern.pattern_refs.push_back(line);
                 } else {
                     auto tokens = Split(line, ' ');

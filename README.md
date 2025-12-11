@@ -6,9 +6,18 @@ ITMO Loops
 
 Реализовать программу, способную считывать текстовое описание композиции в формате **ITMO Loops** и генерировать по нему `.wav` файл.
 
+### CLI (Command Line Interface)
 ```sh
 ./itmoloops score.txt music.wav
 ```
+
+### GUI (Graphical User Interface)
+Также доступен графический интерфейс, построенный на ImGui:
+```sh
+./itmoloops_gui
+```
+
+Подробнее о GUI см. [GUI_README.md](./GUI_README.md)
 
 Программа должна:
 
@@ -266,6 +275,45 @@ y(t) = x(t) * (1 - depth + depth * sin(2 * pi * freq * t))
 5. [What is Sampling? - YouTube, Berkley Online](https://youtu.be/sDnw4FFTb6Q)
 
 6. [Factory method pattern - Wikipedia](https://en.wikipedia.org/wiki/Factory_method_pattern)
+
+## GUI - Графический интерфейс
+
+Проект включает графический интерфейс на основе ImGui для удобной работы с композициями.
+
+### Сборка GUI
+
+**Зависимости (Ubuntu/Debian):**
+```bash
+sudo apt-get install libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev xorg-dev
+```
+
+**Сборка:**
+```bash
+# Автоматическая сборка
+./build_gui.sh
+
+# Или вручную
+mkdir build && cd build
+cmake ..
+make -j4
+```
+
+**Запуск:**
+```bash
+./build/bin/itmoloops_gui
+```
+
+### Возможности GUI
+
+- **Редактор файлов**: Просмотр и редактирование композиций с подсветкой синтаксиса
+- **Управление воспроизведением**: Play/Pause/Stop, прогресс-бар, регулировка громкости
+- **Визуализация**: Осциллограмма и спектрограмма в реальном времени
+- **Редактор композиции**: Древовидное отображение инструментов, паттернов и нот
+- **Настройки проекта**: Редактирование BPM, экспорт в WAV
+- **Браузер файлов**: Удобный выбор файлов с фильтрацией
+- **Парсер композиций**: Автоматический анализ структуры композиции
+
+Подробная документация: [GUI_README.md](./GUI_README.md)
 
 ## Теормин
 

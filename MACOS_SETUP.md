@@ -80,6 +80,19 @@ cd build/bin
 
 ## Troubleshooting
 
+### Build Error: "archive member '/' not a mach-o file"
+
+This error means the `libitmoloops_lib.a` library is empty or corrupted. This has been fixed in the latest version.
+
+**Solution:** Pull the latest changes and rebuild:
+```bash
+git pull
+rm -rf build
+./build_gui_macos.sh
+```
+
+See [MACOS_TROUBLESHOOTING.md](./MACOS_TROUBLESHOOTING.md) for detailed solutions to this and other build errors.
+
 ### CMake can't find GLFW
 
 If CMake reports that it can't find GLFW, try:
@@ -204,6 +217,10 @@ rm -rf build
 ```
 
 ## Additional Notes
+
+### Detailed Troubleshooting
+
+For comprehensive troubleshooting including linker errors, build issues, and runtime problems, see [MACOS_TROUBLESHOOTING.md](./MACOS_TROUBLESHOOTING.md).
 
 ### File Paths
 

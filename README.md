@@ -282,17 +282,28 @@ y(t) = x(t) * (1 - depth + depth * sin(2 * pi * freq * t))
 
 ### Сборка GUI
 
-**Зависимости (Ubuntu/Debian):**
+**Linux (Ubuntu/Debian):**
 ```bash
+# Установка зависимостей
 sudo apt-get install libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev xorg-dev
+
+# Сборка
+./build_gui.sh
 ```
 
-**Сборка:**
+**macOS:**
 ```bash
-# Автоматическая сборка
-./build_gui.sh
+# Установка зависимостей
+brew install cmake glfw
 
-# Или вручную
+# Сборка
+./build_gui_macos.sh
+```
+
+Подробная инструкция для macOS: [MACOS_SETUP.md](./MACOS_SETUP.md)
+
+**Ручная сборка:**
+```bash
 mkdir build && cd build
 cmake ..
 make -j4

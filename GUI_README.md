@@ -62,12 +62,35 @@ A graphical user interface for the ITMO Loops audio composition system, built wi
 - GLFW3
 - ImGui (automatically fetched via CMake)
 
-### Ubuntu/Debian
+### Linux (Ubuntu/Debian)
 ```bash
 sudo apt-get install libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev xorg-dev
 ```
 
+### macOS
+```bash
+# Install Homebrew if not already installed
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install dependencies
+brew install cmake glfw
+```
+
+See [MACOS_SETUP.md](./MACOS_SETUP.md) for detailed macOS setup instructions.
+
 ### Building the GUI
+
+**Linux:**
+```bash
+./build_gui.sh
+```
+
+**macOS:**
+```bash
+./build_gui_macos.sh
+```
+
+**Manual Build:**
 ```bash
 mkdir build
 cd build

@@ -1,0 +1,46 @@
+# ITMO Loops Demo Composition
+# This is a demonstration of the ITMO Loops format
+# with multiple instruments and effects
+
+bpm 140
+
+# Define a sampler instrument with effects
+instrument bass sampler
+    sample=./samples/fbass.wav
+    root=C3
+    attack=0.01
+    release=0.2
+    effect gain gain=0.8
+end
+
+# Define a square wave instrument
+instrument lead square
+    duty=50
+    attack=0.05
+    release=0.1
+    effect echo delay=0.25 decay=0.3
+end
+
+# Define a sine wave for pads
+instrument pad sine
+    attack=0.3
+    release=0.5
+    effect tremolo freq=5 depth=0.3
+end
+
+# Main pattern with all instruments
+pattern main resolution 16
+    00 bass C3  4 70
+    04 bass G2  4 65
+    08 bass C3  4 70
+    12 bass A2  4 68
+    
+    00 lead C5  2 60
+    02 lead D5  2 60
+    04 lead E5  4 65
+    08 lead G5  2 70
+    10 lead F5  2 65
+    12 lead E5  4 60
+    
+    00 pad  E4  16 40
+end

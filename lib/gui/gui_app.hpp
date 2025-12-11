@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include "widgets/file_browser.hpp"
+#include "composition_parser.hpp"
 
 struct GLFWwindow;
 
@@ -63,6 +65,7 @@ private:
     // Composition state
     int bpm_;
     std::string export_path_;
+    Composition composition_;
     
     // UI state
     bool show_file_dialog_;
@@ -73,6 +76,9 @@ private:
     // Visualization data
     std::vector<float> waveform_data_;
     std::vector<float> spectrum_data_;
+    
+    // Widgets
+    widgets::FileBrowser file_browser_;
 };
 
 } // namespace gui

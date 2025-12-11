@@ -265,25 +265,17 @@ void GuiApp::RenderMenuBar() {
         ImGui::EndMenuBar();
     }
     
-    // Simple file dialogs
+    // File browser dialog
     if (show_file_dialog_) {
         ImGui::OpenPopup("Open File");
+        file_browser_.SetCurrentDirectory("./examples");
+        file_browser_.SetFileFilter(".txt");
         show_file_dialog_ = false;
     }
     
-    if (ImGui::BeginPopupModal("Open File", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        static char filepath[256] = "./examples/lick.txt";
-        ImGui::InputText("File Path", filepath, 256);
-        
-        if (ImGui::Button("Open", ImVec2(120, 0))) {
-            OpenFile(filepath);
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
+    std::string selected_file;
+    if (file_browser_.Show("Open File", selected_file)) {
+        OpenFile(selected_file);
     }
     
     if (show_save_dialog_) {
@@ -332,16 +324,33 @@ void GuiApp::RenderFileEditor() {
     
     if (!current_file_.empty()) {
         ImGui::Text("File: %s%s", current_file_.c_str(), file_modified_ ? " *" : "");
+        ImGui::SameLine(ImGui::GetWindowWidth() - 150);
+        if (ImGui::Button("Save", ImVec2(60, 0))) {
+            SaveFile();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Reload", ImVec2(80, 0))) {
+            OpenFile(current_file_);
+        }
     } else {
-        ImGui::TextDisabled("No file loaded");
+        ImGui::TextDisabled("No file loaded - use File > Open to load a composition");
     }
     
     ImGui::Separator();
     
-    // Multiline text editor
-    ImGui::InputTextMultiline("##source", &file_content_[0], file_content_.capacity(),
-                              ImVec2(-1.0f, -1.0f),
-                              ImGuiInputTextFlags_AllowTabInput);
+    // Multiline text editor with callback to track modifications
+    static std::string temp_buffer;
+    if (temp_buffer.capacity() < file_content_.size() + 4096) {
+        temp_buffer.reserve(file_content_.size() + 4096);
+    }
+    temp_buffer = file_content_;
+    
+    if (ImGui::InputTextMultiline("##source", &temp_buffer[0], temp_buffer.capacity(),
+                                  ImVec2(-1.0f, -1.0f),
+                                  ImGuiInputTextFlags_AllowTabInput)) {
+        file_content_ = temp_buffer;
+        file_modified_ = true;
+    }
     
     ImGui::End();
 }
@@ -411,15 +420,44 @@ void GuiApp::RenderWaveformVisualization() {
 void GuiApp::RenderCompositionEditor() {
     ImGui::Begin("Composition Details");
     
+    if (ImGui::Button("Parse Composition", ImVec2(-1.0f, 0))) {
+        composition_ = CompositionParser::Parse(file_content_);
+        bpm_ = composition_.bpm;
+        error_message_ = "Composition parsed successfully";
+    }
+    
+    ImGui::Separator();
+    
     if (ImGui::CollapsingHeader("Instruments", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
-        ImGui::Text("- sax (sampler)");
-        ImGui::Indent();
-        ImGui::TextDisabled("  sample: ./samples/sax.wav");
-        ImGui::TextDisabled("  root: C5");
-        ImGui::TextDisabled("  loop: 8893,9229");
-        ImGui::Unindent();
-        ImGui::Text("+ Add Instrument");
+        
+        if (composition_.instruments.empty()) {
+            ImGui::TextDisabled("No instruments defined");
+        } else {
+            for (const auto& inst : composition_.instruments) {
+                std::string header = inst.name + " (" + inst.type + ")";
+                if (ImGui::TreeNode(header.c_str())) {
+                    // Display parameters
+                    for (const auto& [key, value] : inst.params) {
+                        ImGui::TextDisabled("  %s: %s", key.c_str(), value.c_str());
+                    }
+                    
+                    // Display effects
+                    if (!inst.effects.empty()) {
+                        ImGui::Text("  Effects:");
+                        for (const auto& effect : inst.effects) {
+                            ImGui::TextDisabled("    - %s", effect.type.c_str());
+                            for (const auto& [key, value] : effect.params) {
+                                ImGui::TextDisabled("      %s: %s", key.c_str(), value.c_str());
+                            }
+                        }
+                    }
+                    
+                    ImGui::TreePop();
+                }
+            }
+        }
+        
         ImGui::Unindent();
     }
     
@@ -427,11 +465,23 @@ void GuiApp::RenderCompositionEditor() {
     
     if (ImGui::CollapsingHeader("Patterns", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Indent();
-        ImGui::Text("- main (resolution: 8)");
-        ImGui::Indent();
-        ImGui::TextDisabled("  7 notes");
-        ImGui::Unindent();
-        ImGui::Text("+ Add Pattern");
+        
+        if (composition_.patterns.empty()) {
+            ImGui::TextDisabled("No patterns defined");
+        } else {
+            for (const auto& pattern : composition_.patterns) {
+                std::string header = pattern.name + " (resolution: " + 
+                                   std::to_string(pattern.resolution) + ")";
+                if (ImGui::TreeNode(header.c_str())) {
+                    ImGui::TextDisabled("  Notes: %zu", pattern.notes.size());
+                    if (!pattern.pattern_refs.empty()) {
+                        ImGui::TextDisabled("  References: %zu", pattern.pattern_refs.size());
+                    }
+                    ImGui::TreePop();
+                }
+            }
+        }
+        
         ImGui::Unindent();
     }
     
@@ -440,33 +490,43 @@ void GuiApp::RenderCompositionEditor() {
     if (ImGui::CollapsingHeader("Notes")) {
         ImGui::Indent();
         
-        // Table of notes
-        if (ImGui::BeginTable("notes_table", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn("Time");
-            ImGui::TableSetupColumn("Inst");
-            ImGui::TableSetupColumn("Pitch");
-            ImGui::TableSetupColumn("Dur");
-            ImGui::TableSetupColumn("Vel");
-            ImGui::TableHeadersRow();
+        // Show notes from all patterns
+        int total_notes = 0;
+        for (const auto& pattern : composition_.patterns) {
+            if (pattern.notes.empty()) continue;
             
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0); ImGui::Text("00");
-            ImGui::TableSetColumnIndex(1); ImGui::Text("sax");
-            ImGui::TableSetColumnIndex(2); ImGui::Text("D5");
-            ImGui::TableSetColumnIndex(3); ImGui::Text("2");
-            ImGui::TableSetColumnIndex(4); ImGui::Text("50");
+            ImGui::Text("Pattern: %s", pattern.name.c_str());
             
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0); ImGui::Text("05");
-            ImGui::TableSetColumnIndex(1); ImGui::Text("sax");
-            ImGui::TableSetColumnIndex(2); ImGui::Text("E5");
-            ImGui::TableSetColumnIndex(3); ImGui::Text("2");
-            ImGui::TableSetColumnIndex(4); ImGui::Text("50");
+            if (ImGui::BeginTable(("notes_" + pattern.name).c_str(), 5, 
+                                 ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | 
+                                 ImGuiTableFlags_ScrollY, ImVec2(0, 150))) {
+                ImGui::TableSetupColumn("Time");
+                ImGui::TableSetupColumn("Instrument");
+                ImGui::TableSetupColumn("Pitch");
+                ImGui::TableSetupColumn("Duration");
+                ImGui::TableSetupColumn("Velocity");
+                ImGui::TableHeadersRow();
+                
+                for (const auto& note : pattern.notes) {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0); ImGui::Text("%02d", note.start);
+                    ImGui::TableSetColumnIndex(1); ImGui::Text("%s", note.instrument.c_str());
+                    ImGui::TableSetColumnIndex(2); ImGui::Text("%s", note.pitch.c_str());
+                    ImGui::TableSetColumnIndex(3); ImGui::Text("%d", note.duration);
+                    ImGui::TableSetColumnIndex(4); ImGui::Text("%d", note.velocity);
+                    total_notes++;
+                }
+                
+                ImGui::EndTable();
+            }
             
-            ImGui::EndTable();
+            ImGui::Spacing();
         }
         
-        ImGui::Text("+ Add Note");
+        if (total_notes == 0) {
+            ImGui::TextDisabled("No notes defined");
+        }
+        
         ImGui::Unindent();
     }
     
@@ -477,16 +537,19 @@ void GuiApp::RenderProjectSettings() {
     ImGui::Begin("Project Settings");
     
     ImGui::Text("Tempo");
-    ImGui::InputInt("BPM", &bpm_);
+    if (ImGui::InputInt("BPM", &bpm_)) {
+        composition_.bpm = bpm_;
+    }
     
     ImGui::Spacing();
     ImGui::Separator();
     ImGui::Spacing();
     
     ImGui::Text("Export");
-    ImGui::InputText("Output Path", &export_path_[0], export_path_.capacity());
+    static char export_buffer[256] = "output.wav";
+    ImGui::InputText("Output Path", export_buffer, 256);
     if (ImGui::Button("Export WAV", ImVec2(-1.0f, 0))) {
-        ExportWAV(export_path_);
+        ExportWAV(export_buffer);
     }
     
     ImGui::Spacing();
@@ -494,9 +557,15 @@ void GuiApp::RenderProjectSettings() {
     ImGui::Spacing();
     
     ImGui::Text("Statistics");
-    ImGui::TextDisabled("Instruments: 1");
-    ImGui::TextDisabled("Patterns: 1");
-    ImGui::TextDisabled("Notes: 7");
+    ImGui::TextDisabled("Instruments: %zu", composition_.instruments.size());
+    ImGui::TextDisabled("Patterns: %zu", composition_.patterns.size());
+    
+    // Count total notes
+    int total_notes = 0;
+    for (const auto& pattern : composition_.patterns) {
+        total_notes += pattern.notes.size();
+    }
+    ImGui::TextDisabled("Notes: %d", total_notes);
     ImGui::TextDisabled("Duration: %.2f s", total_duration_);
     
     ImGui::End();
@@ -545,6 +614,11 @@ void GuiApp::OpenFile(const std::string& filepath) {
     current_file_ = filepath;
     file_modified_ = false;
     AddRecentFile(filepath);
+    
+    // Parse the composition
+    composition_ = CompositionParser::Parse(file_content_);
+    bpm_ = composition_.bpm;
+    
     error_message_ = "Loaded: " + filepath;
 }
 

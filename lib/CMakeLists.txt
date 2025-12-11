@@ -6,6 +6,8 @@ target_include_directories(itmoloops_lib PUBLIC .)
 # GUI library
 add_library(itmoloops_gui_lib
     gui/gui_app.cpp
+    gui/composition_parser.cpp
+    gui/widgets/file_browser.cpp
 )
 
 target_include_directories(itmoloops_gui_lib PUBLIC .)

@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cctype>
 #include <sstream>
+#include <cstdint>
 
 using namespace std;
 

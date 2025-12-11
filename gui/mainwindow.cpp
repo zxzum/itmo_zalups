@@ -11,6 +11,7 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <QApplication>
+#include <QRegularExpression>
 #include <fstream>
 #include <sstream>
 #include <filesystem>
@@ -28,8 +29,7 @@ MainWindow::MainWindow(QWidget* parent)
     resize(1200, 800);
 }
 
-MainWindow::~MainWindow() {
-}
+
 
 void MainWindow::setupUI() {
     QWidget* central = new QWidget(this);
@@ -498,13 +498,25 @@ std::vector<float> MainWindow::loadWavForPreview(const QString& path) {
     char header[44];
     file.read(header, 44);
     
+    // Проверяем успешность чтения
+    if (!file || file.gcount() < 44) return samples;
+    
     if (std::string(header, 4) != "RIFF") return samples;
     if (std::string(header + 8, 4) != "WAVE") return samples;
     
-    // Читаем данные
+    // Проверяем формат (упрощенная проверка для 16-bit PCM)
+    uint16_t audioFormat = *reinterpret_cast<uint16_t*>(header + 20);
+    uint16_t bitsPerSample = *reinterpret_cast<uint16_t*>(header + 34);
+    
+    if (audioFormat != 1 || bitsPerSample != 16) {
+        // Не поддерживаемый формат для превью
+        return samples;
+    }
+    
+    // Читаем оставшиеся данные
     std::vector<char> data((std::istreambuf_iterator<char>(file)), {});
     
-    // Преобразуем в float (упрощенно)
+    // Преобразуем в float
     const int16_t* ptr = reinterpret_cast<const int16_t*>(data.data());
     size_t count = data.size() / 2;
     

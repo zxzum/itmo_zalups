@@ -9,6 +9,7 @@
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+#include <ctime>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -115,8 +116,9 @@ int run_itmoloops_from_string(const string& scoreContent,
         cerr << "warning: cant load " << notesPath << ", using default A4=440\n";
     }
 
-    // Парсим score из строки (сохраняем во временный файл)
-    string tempPath = (fs::path(baseDir) / ".temp_score.txt").string();
+    // Парсим score из строки (сохраняем во временный файл с уникальным именем)
+    fs::path tempDir = fs::temp_directory_path();
+    string tempPath = (tempDir / ("itmoloops_" + to_string(time(nullptr)) + ".txt")).string();
     {
         ofstream f(tempPath);
         if (!f) {

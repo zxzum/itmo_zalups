@@ -9,6 +9,14 @@ project(
 
 set(CMAKE_CXX_STANDARD 20)
 
-
 add_subdirectory(lib)
 add_subdirectory(bin)
+
+# Попытаться собрать GUI, если доступен Qt6
+find_package(Qt6 QUIET COMPONENTS Core Widgets Gui)
+if(Qt6_FOUND)
+    message(STATUS "Qt6 found, building GUI")
+    add_subdirectory(gui)
+else()
+    message(STATUS "Qt6 not found, skipping GUI build")
+endif()
